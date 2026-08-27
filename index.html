@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>長週期轉空監控儀表板・完整版｜2026年8月</title>
+<style>
+  :root{
+    --bg:#0b0f17; --panel:#121826; --panel2:#0f1520; --line:#232d40;
+    --txt:#e6ebf4; --muted:#8b96ab;
+    --red:#f0554e; --orange:#f59e0b; --yellow:#eab308; --green:#34c274; --blue:#4f8cff;
+    --red-bg:rgba(240,85,78,.12); --orange-bg:rgba(245,158,11,.12);
+    --yellow-bg:rgba(234,179,8,.12); --green-bg:rgba(52,194,116,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(79,140,255,.08), transparent 60%),
+      radial-gradient(900px 500px at -10% 30%, rgba(240,85,78,.06), transparent 55%),
+      var(--bg);
+    color:var(--txt);
+    font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei","Heiti TC",system-ui,-apple-system,sans-serif;
+    line-height:1.6; padding:28px 16px 60px;
+  }
+  .wrap{max-width:1080px;margin:0 auto}
+
+  header{margin-bottom:22px}
+  .kicker{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .badge{font-size:12px;letter-spacing:.08em;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 12px;background:var(--panel2)}
+  h1{font-size:clamp(22px,3.4vw,32px);font-weight:800;letter-spacing:.02em}
+  h1 .accent{color:var(--blue)}
+  .subtitle{color:var(--muted);font-size:14px;margin-top:6px}
+  .verdict{margin-top:16px;display:flex;gap:14px;flex-wrap:wrap}
+  .verdict-card{flex:1;min-width:250px;background:linear-gradient(135deg,rgba(240,85,78,.14),rgba(52,194,116,.10));border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .verdict-card .big{font-size:clamp(24px,4vw,34px);font-weight:900;letter-spacing:.06em}
+  .verdict-card .big .r{color:var(--red)} .verdict-card .big .g{color:var(--green)}
+  .verdict-card p{font-size:13px;color:var(--muted);margin-top:4px}
+  .hint{font-size:12px;color:var(--muted);margin-top:12px}
+  .hint .demo{border-bottom:1px dashed var(--blue);cursor:help;color:var(--txt)}
+
+  .nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .nav a{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 12px;text-decoration:none;background:var(--panel2)}
+  .nav a:hover{color:var(--txt);border-color:var(--blue)}
+
+  section{margin-top:34px}
+  h2{font-size:17px;font-weight:800;display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap}
+  h2 .no{color:var(--blue);font-family:ui-monospace,monospace;font-size:19px}
+  .sec-desc{font-size:13px;color:var(--muted);margin-bottom:14px}
+
+  .gauge-box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 20px 14px}
+  .gauge-track{position:relative;height:18px;border-radius:9px;overflow:hidden;
+    background:linear-gradient(90deg,#1d3b2c 0%,#1d3b2c 20%,#3d3a1c 20%,#3d3a1c 55%,#4a2320 55%,#4a2320 100%)}
+  .gauge-band{position:absolute;top:0;bottom:0;left:25%;width:15%;background:rgba(234,179,8,.75);box-shadow:0 0 14px rgba(234,179,8,.5)}
+  .gauge-tick{position:absolute;top:-4px;bottom:-4px;width:2px;background:#fff}
+  .gauge-labels{position:relative;height:52px;margin-top:8px;font-size:12px}
+  .gl{position:absolute;transform:translateX(-50%);text-align:center;color:var(--muted);white-space:nowrap}
+  .gl b{display:block;color:var(--txt);font-size:13px}
+  .gauge-note{font-size:12px;color:var(--muted);border-top:1px dashed var(--line);padding-top:10px;margin-top:2px}
+
+  .chips{display:flex;gap:10px;flex-wrap:wrap}
+  .chip{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px}
+  .dot{width:10px;height:10px;border-radius:50%;flex:none}
+  .dot.r{background:var(--red);box-shadow:0 0 8px var(--red)}
+  .dot.o{background:var(--orange);box-shadow:0 0 8px var(--orange)}
+  .dot.y{background:var(--yellow);box-shadow:0 0 8px var(--yellow)}
+  .dot.g{background:var(--green);box-shadow:0 0 8px var(--green)}
+  .dot.b{background:var(--blue);box-shadow:0 0 8px var(--blue)}
+  .chip b{font-size:15px}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+  .layer{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column}
+  .layer-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px}
+  .layer-head h3{font-size:15px;font-weight:800}
+  .layer-tag{font-size:11px;padding:2px 10px;border-radius:999px;white-space:nowrap}
+  .tag-r{background:var(--red-bg);color:var(--red)}
+  .tag-g{background:var(--green-bg);color:var(--green)}
+  .tag-y{background:var(--yellow-bg);color:#d8c24a}
+  .tag-o{background:var(--orange-bg);color:var(--orange)}
+  .tag-b{background:rgba(79,140,255,.14);color:var(--blue)}
+  .layer-sub{font-size:12px;color:var(--muted);margin-bottom:10px}
+  .ind{border-top:1px solid var(--line);padding:11px 0}
+  .ind:last-child{padding-bottom:2px}
+  .ind-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .ind-name{font-weight:700;font-size:14px}
+  .ind-val{margin-left:auto;font-family:ui-monospace,SFMono-Regular,monospace;font-size:14px;font-weight:700}
+  .v-r{color:var(--red)} .v-o{color:var(--orange)} .v-y{color:#e3cf58} .v-g{color:var(--green)}
+  .ind-meta{font-size:12px;color:var(--muted);margin-top:3px;padding-left:19px}
+  .meter{height:5px;border-radius:3px;background:#1c2536;margin:7px 0 0 19px;overflow:visible;position:relative}
+  .meter i{position:absolute;top:0;bottom:0;left:0;border-radius:3px}
+  .meter .thr{position:absolute;top:-2px;bottom:-2px;width:2px;background:rgba(255,255,255,.55)}
+  .meter-label{font-size:11px;color:var(--muted);margin:3px 0 0 19px}
+
+  .ladder{display:flex;flex-direction:column;gap:10px}
+  .rung{display:flex;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;align-items:flex-start}
+  .rung .lv{flex:none;width:74px;text-align:center;font-family:ui-monospace,monospace;font-weight:800;font-size:13px;border-radius:8px;padding:8px 4px}
+  .lv0{background:var(--yellow-bg);color:#e3cf58}
+  .lv1,.lv2{background:var(--red-bg);color:var(--red)}
+  .lv3{background:rgba(240,85,78,.22);color:#ff7b75}
+  .lvx{background:var(--orange-bg);color:var(--orange)}
+  .rung .body{font-size:13.5px}
+  .rung .body b{font-size:14px}
+  .rung .cite{display:block;font-size:11.5px;color:var(--muted);margin-top:3px}
+  .rule{background:var(--panel2);border:1px dashed var(--line);border-radius:12px;padding:13px 16px;font-size:13px;color:var(--muted);margin-top:6px}
+  .rule b{color:var(--txt)}
+  .rule.alert{border:1px solid var(--red);border-left:4px solid var(--red);background:var(--red-bg);color:var(--txt)}
+
+  .charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+  .chart-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .chart-card h3{font-size:14px;font-weight:800;margin-bottom:2px}
+  .chart-card .src{font-size:11px;color:var(--muted);margin-bottom:14px}
+  .bars{display:flex;align-items:flex-end;gap:14px;height:150px;padding:0 4px}
+  .bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;height:100%}
+  .bar .col{width:100%;max-width:66px;border-radius:6px 6px 0 0;background:linear-gradient(180deg,var(--blue),#2a5bd7);position:relative;min-height:4px}
+  .bar .col.hot{background:linear-gradient(180deg,var(--orange),#b45309)}
+  .bar .col.dim{background:linear-gradient(180deg,#5b6a85,#39435a)}
+  .bar .col.crash{background:linear-gradient(180deg,var(--red),#8f221d)}
+  .bar .v{font-family:ui-monospace,monospace;font-size:12.5px;font-weight:700}
+  .bar .x{font-size:11.5px;color:var(--muted);text-align:center;line-height:1.3}
+  .chart-note{font-size:11.5px;color:var(--muted);margin-top:12px;border-top:1px dashed var(--line);padding-top:8px}
+
+  .warn-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+  .warn{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--orange);border-radius:10px;padding:13px 14px}
+  .warn h4{font-size:13.5px;margin-bottom:4px}
+  .warn p{font-size:12.5px;color:var(--muted)}
+
+  .table-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px 12px;overflow-x:auto;margin-top:6px}
+  .tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+  .tbl th{color:var(--muted);font-weight:700;text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);font-size:12px;white-space:nowrap}
+  .tbl td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl .hl{color:var(--txt);font-weight:700}
+
+  footer{margin-top:38px;border-top:1px solid var(--line);padding-top:16px;font-size:12px;color:var(--muted)}
+  footer p{margin-bottom:8px}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;font-size:12.5px;color:var(--muted)}
+  .legend span{display:flex;align-items:center;gap:6px}
+
+  .term{border-bottom:1px dashed rgba(79,140,255,.75);cursor:help;color:inherit}
+  #tip{
+    position:fixed;display:none;z-index:99;max-width:min(300px,86vw);
+    background:#1a2233;border:1px solid #33405c;border-radius:10px;
+    padding:10px 13px;font-size:12.5px;line-height:1.65;color:#dfe6f3;
+    box-shadow:0 10px 30px rgba(0,0,0,.5);
+  }
+
+  /* 第 10 區專用樣式 */
+  #s10 .lv{display:flex;align-items:center;justify-content:center;gap:5px;width:80px;font-size:15px}
+  #s10 .lv .lvn{font-size:20px;font-weight:900;line-height:1;font-family:ui-monospace,SFMono-Regular,monospace}
+  #s10 .rung .body{font-size:14px;line-height:1.75}
+  #s10 .rung .body b{font-size:14.5px}
+  #s10 .num{font-family:ui-monospace,SFMono-Regular,monospace;font-weight:800;color:var(--txt);font-size:1.12em;letter-spacing:.01em}
+  #s10 .verdict-card p{font-size:13.5px;line-height:1.8}
+  #s10 .rule{font-size:13.5px;line-height:1.75}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ============ Header ============ -->
+  <header>
+    <div class="kicker">
+      <span class="badge">長週期系列・完整統整版 v2.1</span>
+      <span class="badge">數據基準：2026 年 8 月 28 日</span>
+      <span class="badge">10 大區塊・附文獻與驗證紀錄</span>
+    </div>
+    <h1>長週期轉空<span class="accent">監控儀表板</span></h1>
+    <div class="subtitle">145 年數據＋計量文獻驗證｜估值決定跌多深・信用利差決定何時跌・棄兒決定誰能贏</div>
+
+    <div class="verdict">
+      <div class="verdict-card">
+        <div class="big"><span class="r">高脆弱</span>、<span class="g">未引爆</span></div>
+        <p>估值層已達歷史極值（勢能滿格），信用層與實體層全數平靜（引爆器未點火）。歷史大頂的典型組合：估值先到位，信用後爆發。未來 12 個月系統性轉空條件機率約 25–40%。</p>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a href="#s1">01 四大原因</a><a href="#s2">02 條件機率</a><a href="#s3">03 燈號總覽</a>
+      <a href="#s4">04 監控清單</a><a href="#s5">05 警報規則</a><a href="#s6">06 關鍵圖表</a>
+      <a href="#s7">07 失準警示</a><a href="#s8">08 投資框架</a><a href="#s9">09 轉空後劇本</a><a href="#s10">10 結論</a>
+    </nav>
+
+    <div class="hint">💡 帶虛線的<span class="demo">專有名詞</span>皆可「滑鼠停留」或「手機點一下」看白話說明，例如：<span class="term" data-tip="超額債券溢酬（Excess Bond Premium）：Gilchrist 與 Zakrajšek（2012，AER）從公司債利差中扣除「可由違約機率解釋的部分」後的殘差，代表金融市場純粹的風險胃納與信用供給意願。轉正且上升＝金融部門開始收縮信用，是統計上最可靠的「引爆時點」指標。">EBP</span>、<span class="term" data-tip="戴維斯雙殺：股價＝EPS × 本益比。轉空時「獲利下修」與「估值壓縮」同時發生，跌幅是兩者相乘。例：本益比 40→20 倍（−50%）疊加 EPS −20%，股價約 −60%——連衰退都不用，光估值回歸就夠了。共識股的溢價本身就是下行風險。">戴維斯雙殺</span></div>
+  </header>
+
+  <!-- ============ 01 四大轉空原因 ============ -->
+  <section id="s1">
+    <h2><span class="no">01</span> 理論地基：150 年來，牛市只被四件事殺死</h2>
+    <p class="sec-desc">依<span class="term" data-tip="康德拉季耶夫長波（Kondratieff Wave）：約 50–60 年的技術驅動長週期理論。學術上有爭議（樣本少、難以統計檢定），本報告僅作「敘事定位框架」使用，不當精密計時工具——歷史上沒有人用它準確抓到轉折時點。">長波框架</span>整理歷史轉折，抽掉細節後原因只有四大類，且常兩三類疊加。目前定位：資訊科技長波尾聲 × AI 新長波投資期的重疊區。</p>
+    <div class="chips" style="margin-bottom:12px">
+      <div class="chip"><span class="dot o"></span>① 投資過剩→供過於求</div>
+      <div class="chip"><span class="dot r"></span>② 債務槓桿觸頂</div>
+      <div class="chip"><span class="dot y"></span>③ 通膨迫使緊縮</div>
+      <div class="chip"><span class="dot b"></span>④ 制度／地緣斷裂</div>
+    </div>
+    <div class="table-card">
+      <table class="tbl">
+        <tr><th>轉折點</th><th>表面事件</th><th>原因類別</th></tr>
+        <tr><td class="hl">1873 長蕭條</td><td>鐵路狂熱崩盤</td><td>①投資過剩（資本開支跑贏真實需求）</td></tr>
+        <tr><td class="hl">1929 大蕭條</td><td>華爾街崩盤</td><td>②槓桿極限＋①供過於求＋政策緊縮錯誤放大</td></tr>
+        <tr><td class="hl">1970s 停滯性通膨</td><td>石油危機・布列敦森林瓦解</td><td>③④成本與貨幣制度斷裂 → 通膨迫使緊縮</td></tr>
+        <tr><td class="hl">1990 日本泡沫</td><td>央行連續升息</td><td>②資產槓桿極限＋政策主動刺破</td></tr>
+        <tr><td class="hl">2000 網路泡沫</td><td>科技股崩盤</td><td>①新技術投資過剩、獲利跟不上資本開支</td></tr>
+        <tr><td class="hl">2008 金融海嘯</td><td>次貸違約</td><td>②債務與信用循環反轉</td></tr>
+        <tr><td class="hl">2022 修正</td><td>通膨飆升</td><td>③通膨 → 貨幣緊縮（中週期級別）</td></tr>
+      </table>
+    </div>
+    <div class="rule">🔑 <b>核心洞察</b>：牛市從不老死，只被上述四類原因之一「謀殺」（廣義化自 Rudi Dornbusch：「戰後的擴張都是被 Fed 謀殺的」）。本輪最可能劇本＝①AI 資本開支由供不應求轉供過於求 ＋ ③通膨黏著掐斷寬鬆，即 2000＋2022 混合體；④美伊衝突已於 2026 年實際發生，屬「已兌現、隨時可再升級」的現實變數。</div>
+  </section>
+
+  <!-- ============ 02 條件機率 ============ -->
+  <section id="s2">
+    <h2><span class="no">02</span> 未來 12 個月系統性轉空的<span class="term" data-tip="條件機率：「在目前所有證據下」估計的機率，會隨新資訊（觸發事件）而更新。這是計量上唯一負責任的預測形式——與「預測某月會崩盤」的日期式預言完全不同。本估計為文獻框架推理，非精算輸出。">條件機率</span></h2>
+    <p class="sec-desc">無條件歷史基準約 15% → 目前讀數組合下約 25–40% → 若第一警報觸發，跳升至 60% 以上</p>
+    <div class="gauge-box">
+      <div class="gauge-track">
+        <div class="gauge-band"></div>
+        <div class="gauge-tick" style="left:15%"></div>
+        <div class="gauge-tick" style="left:60%"></div>
+      </div>
+      <div class="gauge-labels">
+        <div class="gl" style="left:15%"><b>15%</b>歷史基準</div>
+        <div class="gl" style="left:32%"><b>25–40%</b>目前估計</div>
+        <div class="gl" style="left:60%"><b>60%+</b>警報觸發後</div>
+      </div>
+      <div class="gauge-note">機率推升來源：極端估值＋AI 資本支出集中度＋<span class="term" data-tip="賣方融資（vendor financing）：設備商借錢（或提供擔保）給客戶來購買自己的產品。2000 年電信泡沫中，朗訊、北電因客戶倒閉認列鉅額貸款損失、九大設備商合計約 256 億美元。本輪 NVIDIA 動員逾 5,000 億美元第三方資本支持客戶建設，規模約為當年的 20 倍——差別是風險改藏在私募信貸與保險退休金體系。">賣方融資</span>結構脆弱｜機率壓制來源：信用與實體指標全綠。｜註：目前 2 個紅燈屬估值層「前提」，其效果已計入 25–40%；跳升至 60%+ 需信用層警報（HY OAS 破 400 且 EBP 轉正）實際觸發，定義見<a href="#s5" style="color:var(--blue)">第 05 區</a>。</div>
+    </div>
+  </section>
+
+  <!-- ============ 03 燈號總覽 ============ -->
+  <section id="s3">
+    <h2><span class="no">03</span> 15 項指標燈號總覽</h2>
+    <div class="chips">
+      <div class="chip"><span class="dot r"></span>估值滿格（前提成立，非警報）<b>2</b></div>
+      <div class="chip"><span class="dot y"></span>逼近門檻 <b>3</b></div>
+      <div class="chip"><span class="dot o"></span>過熱（脆弱源）<b>2</b></div>
+      <div class="chip"><span class="dot g"></span>未觸發 <b>8</b></div>
+    </div>
+  </section>
+
+  <!-- ============ 04 四層監控清單 ============ -->
+  <section id="s4">
+    <h2><span class="no">04</span> 四層監控清單</h2>
+    <p class="sec-desc">依「管幅度 vs. 管時點」分層。每項附讀數、數據日期、觸發門檻或歷史分位。</p>
+    <div class="grid">
+
+      <div class="layer">
+        <div class="layer-head"><h3>🔴 估值層</h3><span class="layer-tag tag-r">已滿格・管跌幅不管時點</span></div>
+        <div class="layer-sub">統計依據：Campbell &amp; Shiller (1988, 1998)——只預測未來 10 年報酬，不預測時點</div>
+        <div class="ind">
+          <div class="ind-top"><span class="dot r"></span><span class="ind-name"><span class="term" data-tip="席勒本益比（Shiller CAPE / P/E10）：股價 ÷ 過去 10 年通膨調整後平均盈餘。抹平景氣循環的估值尺；越高代表未來 10 年期望報酬越低，但對一年內的時點幾乎無預測力。長期均值約 17。">席勒 CAPE</span></span><span class="ind-val v-r">41.2×</span></div>
+          <div class="ind-meta">2026/8｜1881 年來第 98.9 百分位・僅 18 個月更高（全在 1999–2000）・史高 44.2</div>
+          <div class="meter"><i style="width:98.9%;background:var(--red)"></i></div>
+          <div class="meter-label">歷史分位 98.9%</div>
+        </div>
+        <div class="ind">
+          <div class="ind-top"><span class="dot r"></span><span class="ind-name"><span class="term" data-tip="巴菲特指標：股市總市值 ÷ GDP，衡量股市規模相對實體經濟。巴菲特曾稱逼近 200% 即是「玩火」。與 CAPE 同屬長期均值回歸型指標，對時點無效。">巴菲特指標</span></span><span class="ind-val v-r">&gt;240%</span></div>
+          <div class="ind-meta">2026/8/18｜歷史新高・約 2.6 個標準差（1982 年低點 32.7%）</div>
+          <div class="meter"><i style="width:100%;background:var(--red)"></i></div>
+          <div class="meter-label">歷史分位 100%（創高）</div>
+        </div>
+        <div class="ind">
+          <div class="ind-top"><span class="dot y"></span><span class="ind-name"><span class="term" data-tip="超額 CAPE 收益率（ECY，Shiller 2020）：CAPE 的倒數（盈餘殖利率）減去實質 10 年期公債殖利率，衡量「股票相對債券」的預期優勢。2000 年頂部曾轉負；目前 0.96% 雖為正，但遠低於長期均值 2.52%，代表股票風險溢酬已被壓得很薄。">超額 CAPE 收益率</span></span><span class="ind-val v-y">0.96%</span></div>
+          <div class="ind-meta">2026/8｜長期均值 2.52%・低於均值約 62%・2000 年頂部曾轉負</div>
+          <div class="meter"><i style="width:38%;background:var(--yellow)"></i></div>
+          <div class="meter-label">相對長期均值 38%（越低越貴）</div>
+        </div>
+      </div>
+
+      <div class="layer">
+        <div class="layer-head"><h3>🟢 信用層</h3><span class="layer-tag tag-g">平靜・第一警報所在</span></div>
+        <div class="layer-sub">統計依據：Gilchrist &amp; Zakrajšek (2012, AER)——信用利差的預測力幾乎全來自 EBP</div>
+        <div class="ind">
+          <div class="ind-top"><span class="dot g"></span><span class="ind-name"><span class="term" data-tip="高收益債利差（HY OAS）：垃圾債（BB 級以下公司債）殖利率高出同天期美國公債的幅度（經選擇權調整）。是市場為「違約風險」開出的即時價格：走寬＝信用緊縮警訊。FRED 代碼 BAMLH0A0HYM2，每日更新，本儀表板的第一警報。">高收益債利差 OAS</span></span><span class="ind-val v-g">275bps</span></div>
+          <div class="ind-meta">2026/8/20｜近 5 年約第 15 百分位（極低）・史低 241（2007/6）・<b style="color:#e3cf58">警戒線 400–450</b></div>
+          <div class="meter"><i style="width:16%;background:var(--green)"></i><span class="thr" style="left:62%"></span></div>
+          <div class="meter-label">目前位置 vs. 白線＝觸發門檻</div>
+        </div>
+        <div class="ind">
+          <div class="ind-top"><span class="dot g"></span><span class="ind-name"><span class="term" data-tip="超額債券溢酬（EBP）：Gilchrist-Zakrajšek（2012）從信用利差扣除「違約機率可解釋的部分」後的殘差，代表金融部門純粹的風險胃納。負值＝風險偏好高於歷史均值；轉正且上升＝信用供給收縮，統計上最可靠的引爆時點訊號。聯準會每月公布。">超額債券溢酬 EBP</span></span><span class="ind-val v-g">−0.391</span></div>
+          <div class="ind-meta">2026/5｜負值＝風險偏好高於均值・歷史中位數 0.127・2008/10 峰值 3.406・<b style="color:#e3cf58">警戒：轉正且上升</b></div>
+          <div class="meter"><i style="width:8%;background:var(--green)"></i><span class="thr" style="left:40%"></span></div>
+          <div class="meter-label">深負值區 vs. 白線＝轉正門檻</div>
+        </div>
+        <div class="ind">
+          <div class="ind-top"><span class="dot g"></span><span class="ind-name"><span class="term" data-tip="BIS 信貸/GDP 缺口：國際清算銀行計算「民間信貸佔 GDP」偏離自身長期趨勢的幅度。超過 +10 個百分點是金融危機的早期警訊（Borio & Lowe 2002），也是巴塞爾協定逆循環緩衝資本的依據。本輪美國讀數為負——因為風險不在銀行信貸，而藏在表外的私募信貸。">BIS 信貸/GDP 缺口</span></span><span class="ind-val v-g">負值</span></div>
+          <div class="ind-meta">近期｜門檻 +10pp・⚠ 但<span class="term" data-tip="私募信貸（private credit）：非銀行的私人放款基金。本輪 AI 債務的主要藏身處——2025 年對 AI 相關公司放款逾 400 億美元（2010 年僅約 30 億），大型壽險公司投入近 1 兆美元。不透明、不在傳統銀行監理雷達上，是 BIS、FSB、IMF 共同點名的金融穩定風險。">私募信貸</span>的 AI 放款 2025 年已逾 400 億美元（BIS Bulletin 120）</div>
+        </div>
+      </div>
+
+      <div class="layer">
+        <div class="layer-head"><h3>🟡 實體層</h3><span class="layer-tag tag-y">大致平靜・兩項逼近</span></div>
+        <div class="layer-sub">統計依據：Estrella &amp; Mishkin (1998)・Leamer (2007)・Sahm (2019)</div>
+        <div class="ind">
+          <div class="ind-top"><span class="dot g"></span><span class="ind-name"><span class="term" data-tip="紐約聯儲 probit 模型：以「10 年期減 3 個月期」公債利差，用 probit 統計模型換算未來 12 個月的衰退機率（Estrella & Mishkin 1996/1998）。歷史上每次衰退前皆突破 50% 門檻。惟 2022–24 史上最長倒掛至今未對應衰退，是此指標近百年最大反例。">紐約聯儲衰退機率</span></span><span class="ind-val v-g">19–30%</span></div>
+          <div class="ind-meta">2026 年中｜2025/11 峰值約 32%・<b style="color:#e3cf58">門檻 50%</b></div>
+          <div class="meter"><i style="width:30%;background:var(--green)"></i><span class="thr" style="left:50%"></span></div>
+          <div class="meter-label">目前上緣 30% vs. 門檻 50%</div>
+        </div>
+        <div class="ind">
+          <div class="ind-top"><span class="dot y"></span><span class="ind-name"><span class="term" data-tip="殖利率曲線（10Y−3M 利差）：長天期減短天期公債殖利率。轉負（倒掛）代表市場預期未來將被迫降息救經濟，1969 年以來每次美國衰退前皆倒掛，平均領先 12–18 個月。目前受期限溢酬（AI 發債潮＋財政赤字推升長端）扭曲，判讀需謹慎。">10Y−3M 利差</span></span><span class="ind-val v-y">≈0 / 微負</span></div>
+          <div class="ind-meta">2026/8｜10 年期 4.65%（長端受 AI 發債潮與赤字推升）・在門檻邊緣震盪</div>
+        </div>
+        <div class="ind">
+          <div class="ind-top"><span class="dot g"></span><span class="ind-name"><span class="term" data-tip="Sahm 法則：失業率的 3 個月移動平均，較過去 12 個月低點上升 0.5 個百分點即觸發，代表「衰退已經開始」的即時判定。2024 年 7 月曾觸發（0.53）但無衰退——發明人 Claudia Sahm 認定為勞動供給異常造成的真誤報。屬同步確認訊號，響起時通常已太晚。">Sahm 法則</span></span><span class="ind-val v-g">0.13–0.27</span></div>
+          <div class="ind-meta">2026 年初｜<b style="color:#e3cf58">門檻 0.50</b>・2024/7 曾誤觸發（0.53）後回落</div>
+          <div class="meter"><i style="width:27%;background:var(--green)"></i><span class="thr" style="left:50%"></span></div>
+          <div class="meter-label">0.27 vs. 門檻 0.50</div>
+        </div>
+        <div class="ind">
+          <div class="ind-top"><span class="dot g"></span><span class="ind-name"><span class="term" data-tip="Conference Board LEI（領先經濟指數）：由 10 項領先變數（ISM 新訂單、建照、利差、股價等）合成的官方級領先指標。經驗警戒線：六個月年化跌幅超過約 4%。注意：其製造業權重約 65%，而美國經濟 88% 是服務業——2024–25 出現「史上最長非衰退期下滑」，結構性失準中。">Conference Board LEI</span></span><span class="ind-val v-g">99.3</span></div>
+          <div class="ind-meta">2026/5｜月 +0.1%・連兩月上升・六個月僅 −0.3%（警戒：年化 &lt;−4%）</div>
+        </div>
+        <div class="ind">
+          <div class="ind-top"><span class="dot g"></span><span class="ind-name"><span class="term" data-tip="ISM 製造業新訂單：美國供應管理協會採購經理人調查的新訂單分項，50 為榮枯線，領先工業生產與企業獲利。目前 56.7、連七個月擴張，實體製造端並未轉弱。">ISM 新訂單</span></span><span class="ind-val v-g">56.7</span></div>
+          <div class="ind-meta">2026/7｜連 7 個月擴張・製造業 PMI 55.6（2022/5 以來最高）・榮枯線 50</div>
+        </div>
+        <div class="ind">
+          <div class="ind-top"><span class="dot y"></span><span class="ind-name"><span class="term" data-tip="住宅固定投資/GDP：蓋房子的投資佔 GDP 比重。Leamer（2007，NBER）：「房市就是景氣循環」——戰後多數衰退前率先下滑，平均領先約 7 季。目前 3.7% 為多年低點、曾連續五季拖累 GDP，符合「偏弱」，但近年領先性有減弱的學術爭論。">住宅投資 / GDP</span></span><span class="ind-val v-y">3.7%</span></div>
+          <div class="ind-meta">2026 Q1｜多年低點・曾連 5 季負貢獻 GDP・Q2 才轉正（+5bp）</div>
+        </div>
+      </div>
+
+      <div class="layer">
+        <div class="layer-head"><h3>🟠 產業層</h3><span class="layer-tag tag-o">本輪特有・過熱中</span></div>
+        <div class="layer-sub">2000 年電信劇本的對應訊號——現貨價格不會說謊</div>
+        <div class="ind">
+          <div class="ind-top"><span class="dot o"></span><span class="ind-name"><span class="term" data-tip="超大規模業者資本支出：Google、Amazon、Microsoft、Meta 四大雲端的年度資本開支。2026 年合計 7,250 億美元、年增 77%；微軟的資本支出已消耗約 95% 營運現金流，開始轉向發債。它是本輪的「勢能來源」——增速見頂之日，就是轉空序列的第一聲。">四大雲端資本支出</span></span><span class="ind-val v-o">7,250億 +77%</span></div>
+          <div class="ind-meta">2026｜歷史新高・仍在加速＝未見「增速見頂」・NVIDIA 另動員 &gt;5,000 億美元融資盤</div>
+        </div>
+        <div class="ind">
+          <div class="ind-top"><span class="dot g"></span><span class="ind-name"><span class="term" data-tip="GPU 租賃價格：雲端算力（如 H100）按小時出租的行情，相當於 AI 時代的「頻寬報價」，本輪最前瞻的供需溫度計。2024–25 上半年曾大跌 23%（供給消化期），2025/10 起一年期合約價自低點反彈約 40%、隨選產能全面售罄。警訊型態＝「持續下跌」而非單次回檔。">GPU 租賃合約價</span></span><span class="ind-val v-g">$2.35/hr</span></div>
+          <div class="ind-meta">2026/3｜自 2025/10 低點 $1.70 反彈 +40%・隨選產能售罄・<b style="color:#e3cf58">警戒：轉為持續下跌</b></div>
+        </div>
+        <div class="ind">
+          <div class="ind-top"><span class="dot o"></span><span class="ind-name"><span class="term" data-tip="DRAM 現貨價：記憶體晶片在現貨市場的即時成交價。歷史上（2000、2018、2022）現貨價領先合約價下跌，是半導體週期轉空的第一聲。但本輪被 HBM（AI 加速器專用的堆疊式記憶體）大量排擠傳統產能而失真：現貨創新高反映結構性短缺，傳統週期訊號暫時失效。">DRAM 現貨價</span></span><span class="ind-val v-o">$42.45 新高</span></div>
+          <div class="ind-meta">2026/8｜合約價 Q1 +90–95%、Q2 +58–63%・被 <span class="term" data-tip="HBM（高頻寬記憶體）：AI 加速器專用的堆疊式 DRAM，單價與毛利遠高於傳統記憶體，已佔 AI 晶片約 63% 成本。三大廠將產能大舉轉向 HBM，造成傳統 DRAM/NAND 結構性短缺、現貨創新高——使「現貨價領先下跌」這個經典週期訊號暫時失真。">HBM</span> 結構性改寫・警戒：現貨領先轉跌</div>
+        </div>
+        <div class="ind">
+          <div class="ind-top"><span class="dot g"></span><span class="ind-name"><span class="term" data-tip="Neocloud 與賣方融資：專營 GPU 算力出租的新型雲端商（CoreWeave、Lambda、Nebius 等），本輪槓桿最集中的弱環節，角色類似 2000 年的電信營運商。NVIDIA 對 CoreWeave 的 backstop（兜底）協議：契約承諾收購其賣不掉的算力（至 2032 年、初始 63 億美元）。市場已在定價執行風險：CoreWeave 無擔保債殖利率約 10%。">Neocloud 賣方融資</span></span><span class="ind-val v-g">未見違約</span></div>
+          <div class="ind-meta">2026/8｜CoreWeave 無擔保債殖利率約 10%・警戒：違約或債務展延事件</div>
+        </div>
+        <div class="ind">
+          <div class="ind-top"><span class="dot g"></span><span class="ind-name"><span class="term" data-tip="Book-to-bill（接單出貨比）：半導體設備「接單金額 ÷ 出貨金額」。大於 1 代表訂單多於出貨（擴張）、小於 1 為收縮，歷史上領先晶圓廠資本支出與半導體景氣 12–18 個月。搭配 ASML 訂單觀察。">設備 book-to-bill</span></span><span class="ind-val v-g">擴張中</span></div>
+          <div class="ind-meta">持續盯 ASML 接單・警戒：跌破 1 且連續下滑</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 05 警報升級規則 ============ -->
+  <section id="s5">
+    <h2><span class="no">05</span> 警報升級規則（附文獻依據）</h2>
+    <p class="sec-desc">依 <span class="term" data-tip="Berge & Jordà（2011，AEJ:Macro）：確立用 ROC 曲線／AUROC（曲線下面積，1＝完美、0.5＝擲硬幣）評估衰退指標的標準方法，並證明「組合指標」的分類能力顯著優於任何單一指標——這是本儀表板採「多指標觸發」規則的統計依據。">Berge-Jordà</span> 組合邏輯：估值前提（已成立）＋至少兩項信用／實體觸發，才判定系統性轉空</p>
+    <div class="ladder">
+      <div class="rung"><div class="lv lv0">現在</div><div class="body"><b>高脆弱、未引爆</b>：條件機率 25–40%。行動：降低高估值集中度、留現金緩衝——不逃跑、不梭哈。</div></div>
+      <div class="rung"><div class="lv lv1">警報 1</div><div class="body"><b>高收益債利差快速走寬突破 400–500bps，且 EBP 轉正</b> → 機率跳升至 60%+，升級防禦配置。<span class="cite">依據：Gilchrist &amp; Zakrajšek (2012, AER)——EBP 衝擊直接領先經濟活動與股價下滑，權重最高的觸發。</span></div></div>
+      <div class="rung"><div class="lv lv2">警報 2</div><div class="body"><b>紐約聯儲衰退機率突破 50%</b> → 機率再加 20–30 個百分點。<span class="cite">依據：Estrella &amp; Mishkin (1998)——歷史上每次衰退前皆突破此門檻。</span></div></div>
+      <div class="rung"><div class="lv lv3">警報 3</div><div class="body"><b>Sahm 法則再觸發（&gt;0.5）且為需求型失業上升</b> → 同步確認，轉空機率視為 &gt;50%，全面防禦。<span class="cite">屬同步訊號：響起時通常已在下跌途中，故列為最後確認而非預警。</span></div></div>
+      <div class="rung"><div class="lv lvx">本輪專屬</div><div class="body"><b>2000 年電信劇本序列</b>：資本支出「增速見頂」→ GPU 租賃價持續下跌 → DRAM 現貨領先轉跌 → Neocloud 融資違約。四步出現任兩步，即視同警報 1。<span class="cite">歷史對照：2000 年電信資本支出見頂 → Nasdaq 2000/3 見頂 → 2001/3 衰退（市場領先實體約 12 個月，Nasdaq 累跌 78%）。</span></div></div>
+    </div>
+    <div class="rule">⚖️ <b>判定規則</b>：單一指標轉弱＝產業自身庫存調整；<b>「價格類＋訂單類＋信用類」三類中至少兩類同時惡化</b>，才構成系統性轉空訊號。反向解除：若資本支出增速自然放緩、但信用維持平靜且實體回穩 → 情境轉為「軟著陸／延長週期」，維持參與。</div>
+  </section>
+
+  <!-- ============ 06 關鍵圖表 ============ -->
+  <section id="s6">
+    <h2><span class="no">06</span> 三張關鍵圖</h2>
+    <div class="charts">
+      <div class="chart-card">
+        <h3>資本支出的「<span class="term" data-tip="二階導數：金額（一階）還在創新高，但「成長速度」（二階）正在崩塌——從 +83% 掉到 +3%。整套 AI 估值建立在「持續擴張」的預期上，因此該怕的不是金額多高，而是加速度下降。2000 年電信資本支出正是在「金額創高、增速歸零」的組合中觸頂。">二階導數</span>崩塌」</h3>
+        <div class="src">超大規模資料中心資本支出年增率｜依高盛預估推算（2025 基期約 4,100 億美元）</div>
+        <div class="bars">
+          <div class="bar"><div class="col hot" style="height:100%"></div><div class="v">+83%</div><div class="x">2026E</div></div>
+          <div class="bar"><div class="col" style="height:23%"></div><div class="v">+19%</div><div class="x">2027E</div></div>
+          <div class="bar"><div class="col dim" style="height:5%"></div><div class="v">+3%</div><div class="x">2028E</div></div>
+        </div>
+        <div class="chart-note">金額仍創高（7,510 → 8,900 → 9,140 億美元），但成長引擎兩年內熄火——「增速見頂」是本輪轉空序列的第一個路標。</div>
+      </div>
+      <div class="chart-card">
+        <h3>歷史投資熱潮佔美國 GDP 峰值</h3>
+        <div class="src">口徑略異（產業資本支出 vs. 固定投資），比較意義在量級</div>
+        <div class="bars">
+          <div class="bar"><div class="col dim" style="height:90%"></div><div class="v">~6%</div><div class="x">1880s<br>鐵路</div></div>
+          <div class="bar"><div class="col dim" style="height:18%"></div><div class="v">~1.2%</div><div class="x">2000<br>電信</div></div>
+          <div class="bar"><div class="col dim" style="height:100%"></div><div class="v">6.7%</div><div class="x">2005<br>住宅</div></div>
+          <div class="bar"><div class="col hot" style="height:46%"></div><div class="v">3.1%</div><div class="x">2027E<br>AI（Slok 估）</div></div>
+        </div>
+        <div class="chart-note">本輪已超越 2000 年電信、正快速逼近房市泡沫量級——兩年增幅超過 2002–2005 年（Torsten Slok, Apollo）。</div>
+      </div>
+      <div class="chart-card">
+        <h3>轉空後：三大共識產業的歷史最大回撤</h3>
+        <div class="src">取歷次熊市回撤區間之深端｜詳見第 09 區</div>
+        <div class="bars">
+          <div class="bar"><div class="col crash" style="height:100%"></div><div class="v">−90%</div><div class="x">記憶體<br>(區間−50~90)</div></div>
+          <div class="bar"><div class="col crash" style="height:83%"></div><div class="v">−75%</div><div class="x">晶圓代工<br>(區間−45~75)</div></div>
+          <div class="bar"><div class="col crash" style="height:78%"></div><div class="v">−70%</div><div class="x">電力設備<br>(區間−40~70)</div></div>
+        </div>
+        <div class="chart-note">「已知的明確事實」的代價寫在估值裡：轉空時吃的是估值×獲利的<span class="term" data-tip="戴維斯雙殺：股價＝EPS × 本益比。轉空時「獲利下修」與「估值壓縮」同時發生，跌幅是兩者相乘。例：本益比 40→20 倍（−50%）疊加 EPS −20%，股價約 −60%。">戴維斯雙殺</span>；差別只在 beta 與復原速度。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 07 失準警示 ============ -->
+  <section id="s7">
+    <h2><span class="no">07</span> 誠實聲明：四大傳統指標近年同時失準</h2>
+    <p class="sec-desc">近百年少見的判讀困境——既可能是「這次不一樣」（結構改變），也可能是「領先期異常拉長」（引爆延後但未取消），兩者都無法用現有數據排除。</p>
+    <div class="warn-grid">
+      <div class="warn"><h4>殖利率曲線</h4><p>2022–24 史上最長倒掛（約 27 個月）至今無 NBER 衰退。主要解釋：QE/QT 扭曲<span class="term" data-tip="期限溢酬：投資人持有長天期債券所要求的額外補償。量化寬鬆（QE）壓低它、量化緊縮（QT）與大量發債推升它。當期限溢酬被政策扭曲時，殖利率曲線的形狀不再純粹反映市場對景氣的預期——這是 2022–24 倒掛「失準」的主要學術解釋。">期限溢酬</span>＋<span class="term" data-tip="Goodhart 法則：「一個指標一旦成為目標，就不再是好指標。」當市場、企業與央行都盯著同一個指標提前行動，指標與結果之間的歷史關係就會改變甚至失效。Campbell Harvey 本人承認殖利率曲線可能正經歷此效應。">Goodhart 法則</span>。</p></div>
+      <div class="warn"><h4>Sahm 法則</h4><p>2024/7 觸發（0.53）卻無衰退——發明人本人認定為「真誤報」，肇因於移民與疫後勞動供給異常擴張，失業率上升非需求收縮型。</p></div>
+      <div class="warn"><h4>Conference Board LEI</h4><p>2024–25 出現「史上最長的非衰退期下滑」。結構原因：製造業權重約 65%，而美國經濟 88% 為服務業。</p></div>
+      <div class="warn"><h4>記憶體現貨價</h4><p>傳統的週期溫度計被 HBM 結構性改寫：現貨創新高反映產能排擠，而非需求週期，經典訊號暫時失效。</p></div>
+    </div>
+    <div class="rule" style="margin-top:12px">📐 <b>小樣本警語</b>：戰後 NBER 衰退僅約 12 次，所有「命中率」的信賴區間都很寬。因此本系統引用跨國百年面板（Schularick &amp; Taylor 2012：14 國 140 年，信貸擴張 <span class="term" data-tip="AUROC（ROC 曲線下面積）：衡量指標區分「衰退／非衰退」能力的統計量。1＝完美分類，0.5＝跟擲硬幣一樣。信貸擴張約 0.72、優於貨幣供給的 0.68；單一指標上限約 0.7–0.8，組合指標可更高——這是「多指標觸發」規則的量化基礎。">AUROC</span> ≈ 0.72）補強，並以組合規則取代單一指標。</div>
+  </section>
+
+  <!-- ============ 08 投資框架 ============ -->
+  <section id="s8">
+    <h2><span class="no">08</span> 投資框架：五買五不買（已完成驗證與反面論證）</h2>
+    <div class="rule alert">⚠️ <b>本區塊為產業框架分析與驗證紀錄，並非投資建議。</b>個股僅為「類型」舉例；每項論點均附反面證據與退場警報，實際執行請考量個人風險承受度、部位大小、匯率與稅務，並諮詢持照顧問。投資盈虧自負。</div>
+    <p class="sec-desc" style="margin-top:12px">驗證方法：①當前數據查證（一手／多源交叉）②主動搜尋反面證據（利空面）③歷史類比壓力測試（2000、2008、2018 前例）。所有部位綁定第 05 區警報。</p>
+
+    <div class="grid">
+      <div class="layer">
+        <div class="layer-head"><h3>🅰 電力基礎設施</h3><span class="layer-tag tag-g">論點成立・價格已反映大半</span></div>
+        <div class="layer-sub">重電／變壓器／電源｜台灣重電四雄型・台達電型・Eaton／GE Vernova 型</div>
+        <div class="ind"><div class="ind-top"><span class="dot g"></span><span class="ind-name">已驗證論點</span></div>
+          <div class="ind-meta">AI 最硬瓶頸是電：近半資料中心專案因設備交期（變壓器 2.5 年、部分 4–5 年）與併網排隊延期；台電 10 年 5,645 億強韌電網＋美國電網汰換＝<b>雙引擎</b>，<span class="term" data-tip="在手訂單（backlog）：已簽約但尚未認列為營收的訂單。能見度長代表未來營收可預期，但注意：系統性危機中客戶可展延、重議甚至取消（2001–02 燃氣渦輪與 2008–09 風電訂單取消潮為前例），backlog 是護城河不是保證書。政府預算型 backlog（國防）才真正不看景氣。">在手訂單</span>能見度 2028–2030 年。</div></div>
+        <div class="ind"><div class="ind-top"><span class="dot y"></span><span class="ind-name">反面證據（2026/8 查證）</span></div>
+          <div class="ind-meta">龍頭本益比 40.7 倍、股價淨值比 28.3 倍；2026 EPS 機構共識 1 月 20.82 → 8 月 17.67（已下修 15%）；認列遞延、毛利、缺工、政策節奏皆為「EPS 與本益比同時修正」風險。四雄估值差異大（士電約 33 倍、中興電約 20 倍）。</div></div>
+        <div class="ind"><div class="ind-top"><span class="dot g"></span><span class="ind-name">歷史壓力測試</span></div>
+          <div class="ind-meta">✅ 受管制公用事業資本支出於 2008–2010 危機期間持續成長＝電網需求黏性有史據；🔴 但 2001–02 <span class="term" data-tip="商轉電廠（merchant power）：1999–2001 美國電力自由化催生的市場化電廠投資潮，「電力需求爆發」共識驅動其瘋狂下單燃氣渦輪。2002 泡沫破裂：渦輪訂單暴跌約八成、Calpine／Mirant 破產重整、安隆倒閉、ABB 瀕臨破產。今日的資料中心客戶（hyperscaler／neocloud），正坐在當年商轉電廠的位置上。">商轉電廠</span>泡沫證明：客戶端崩了，設備商訂單照樣蒸發（渦輪訂單 −80%）。</div></div>
+        <div class="ind"><div class="ind-meta"><b style="color:#e3cf58">退場警報</b>：巨頭 capex 增速見頂＋專案取消率再升、訂單能見度縮短、EPS 共識連兩季下修。</div></div>
+      </div>
+
+      <div class="layer">
+        <div class="layer-head"><h3>🅱 記憶體／HBM</h3><span class="layer-tag tag-o">條件成立・退場紀律＝必要條件</span></div>
+        <div class="layer-sub">SK 海力士／美光／三星型｜全組合 beta 最高的一桶</div>
+        <div class="ind"><div class="ind-top"><span class="dot g"></span><span class="ind-name">已驗證論點</span></div>
+          <div class="ind-meta">「40 年一遇」短缺：合約價 Q1 +90–95%、Q2 +58–63%；長約鎖 3–5 年（含騰訊與 CXMT 的 30 億美元長約）；HBM 排擠產能、三雄寡占。</div></div>
+        <div class="ind"><div class="ind-top"><span class="dot r"></span><span class="ind-name">反面證據（重大）</span></div>
+          <div class="ind-meta"><span class="term" data-tip="長鑫存儲（CXMT）：中國最大 DRAM 廠，獲國家支持。2026 年底月產能估 35 萬片、直逼美光的 38.5 萬片，無塵室建設僅需 12 個月（同業 21–24 個月），評估第六廠、產能拚翻倍至 60 萬片。HBM 落後 2–3 個世代、良率約 25%，但 2027–28 年將依國家戰略加速。SemiAnalysis 指其暴利來自短缺價格紅利而非競爭力。">CXMT</span> 供給反撲已排定時程：2026 底產能逼近美光、2028 市佔上看 17%、蘋果／戴爾／HP 傳完成認證；<b>2027–28 年為供需交會點</b>。緩解：HBM 落後 2–3 代、DUV 設備受限、產能優先內需。</div></div>
+        <div class="ind"><div class="ind-top"><span class="dot y"></span><span class="ind-name">歷史壓力測試</span></div>
+          <div class="ind-meta">⚠ <span class="term" data-tip="低本益比陷阱：景氣循環股在「獲利最高峰」時本益比看起來最便宜（因為 E 是峰值），但那往往就是頂——美光 2018 年峰值時本益比僅 3–4 倍，隨後股價腰斬；2022 年淨利 87 億美元、2023 年轉虧 58 億。判斷循環股要看「價格週期位置」，不是本益比高低。">低本益比陷阱</span>前科累累：記憶體「看起來最便宜時往往就是頂」。歷史回撤 −50%～−90%。</div></div>
+        <div class="ind"><div class="ind-meta"><b style="color:#e3cf58">退場警報</b>：DRAM 現貨領先合約轉跌＝無條件執行；CXMT HBM 通過主流驗證亦為預警。</div></div>
+      </div>
+
+      <div class="layer">
+        <div class="layer-head"><h3>🅲 晶圓代工咽喉</h3><span class="layer-tag tag-g">驗證成立度最高</span></div>
+        <div class="layer-sub">台積電型（含先進封裝／設備供應鏈衛星部位）</div>
+        <div class="ind"><div class="ind-top"><span class="dot g"></span><span class="ind-name">已驗證論點</span></div>
+          <div class="ind-meta">2026 資本支出上修至 560 億美元、首次給跨年度指引；<span class="term" data-tip="CoWoS：台積電的 2.5D 先進封裝技術，目前全球 AI 晶片最主流的標準封裝，把 GPU 與 HBM 整合在同一載體上。產能長期滿載、是 AI 晶片的實體瓶頸——誰搶到 CoWoS 產能，誰就能出貨。正從 CoWoS-S 轉向 CoWoS-L 世代。">CoWoS</span> 產能擴 20–30% 至月產 12.5 萬片，<b>新產能開出前已被輝達（佔六成）與博通預訂</b>——「訂單＝真實需求的誠實訊號」獲大摩調查直接驗證。淨現金資產負債表。</div></div>
+        <div class="ind"><div class="ind-top"><span class="dot y"></span><span class="ind-name">反面證據</span></div>
+          <div class="ind-meta">壟斷微幅鬆動：高階封裝從獨佔 90%+ 走向台積電／英特爾 EMIB／日月光 FOEB 三強；<b>台海＝第④類地緣斷裂震央</b>，風險不可分散、是估值折價來源。</div></div>
+        <div class="ind"><div class="ind-top"><span class="dot g"></span><span class="ind-name">歷史壓力測試</span></div>
+          <div class="ind-meta">✅ 2000–02 自高點回檔約七成——但營收 2004 年前恢復並創新高（vs. 思科至今未回 2000 年高點）＝「活到下一輪並率先復原」的教科書案例。</div></div>
+        <div class="ind"><div class="ind-meta"><b style="color:#e3cf58">退場警報</b>：設備 book-to-bill 跌破 1、巨頭 capex 指引下修。</div></div>
+      </div>
+
+      <div class="layer">
+        <div class="layer-head"><h3>🅳 短天期債券／貨幣市場</h3><span class="layer-tag tag-g">成立・<span class="term" data-tip="彈藥桶：短債／現金部位的暱稱。平時領息保值（政策利率 3.50–3.75%、零存續期風險），警報觸發、資產被錯殺時作為進場資金。歷史上每個大底都是「有現金者的市場」。代價：通膨 3.7% 下實質報酬近零＝保存彈藥的保費。">彈藥桶</span></span></div>
+        <div class="layer-sub">本配置的靈魂：不是賺錢部位，是選擇權部位</div>
+        <div class="ind"><div class="ind-top"><span class="dot g"></span><span class="ind-name">已驗證論點＋歷史測試</span></div>
+          <div class="ind-meta">短端收益 3.5%+ 零存續期；高收益債利差 275bps 的不對稱已量化（+100bp＝抹掉五個半月利息）→<b>短債完全替代高收益債</b>。✅ 2008 年國庫券全程正報酬。警報 1 觸發後反向部署（部署對象見第 09 區）。</div></div>
+      </div>
+
+      <div class="layer">
+        <div class="layer-head"><h3>🅴 黃金</h3><span class="layer-tag tag-y">定位修正後成立・小比例長期險</span></div>
+        <div class="layer-sub">對沖第③④類轉空原因（通膨緊縮＋制度地緣斷裂）</div>
+        <div class="ind"><div class="ind-top"><span class="dot g"></span><span class="ind-name">已驗證論點</span></div>
+          <div class="ind-meta">央行購金結構性需求、高盛看 2026 年底 4,900 美元；沃許談話→美元走軟→金價自 4,000 下方反彈站回 4,500 上方＝「制度信任」邏輯獲驗證。</div></div>
+        <div class="ind"><div class="ind-top"><span class="dot y"></span><span class="ind-name">反面證據＋歷史測試</span></div>
+          <div class="ind-meta">⚠ 2026 上半年教訓：地緣→油價→通膨→升息預期→金價「下跌」的反向鏈（年初 5,595 重挫破 4,000）；2008 年 3–11 月流動性擠兌期亦曾大跌。<b>結論：黃金是危機「後」的對沖，不是崩盤當下的避風港。</b></div></div>
+      </div>
+
+      <div class="layer">
+        <div class="layer-head"><h3>🚫 明確避開清單</h3><span class="layer-tag tag-r">與買什麼同等重要</span></div>
+        <div class="layer-sub">全數經前七區數據驗證</div>
+        <div class="ind"><div class="ind-meta">① <b>高收益債</b>：275bps 無緩衝、極度不對稱（用短債替代）。</div></div>
+        <div class="ind"><div class="ind-meta">② <b>長天期公債</b>：長端因 AI 發債潮＋赤字走升（10 年期 4.65%）；「衰退買長債」在<span class="term" data-tip="停滯性通膨：經濟停滯與高通膨並存的狀態。央行救成長會助長通膨、壓通膨會傷成長，政策兩難。1970 年代為模板；該環境下的資產贏家＝能源、黃金、實物資產，輸家＝長債與高估值成長股。">停滯性通膨</span>象限失效。</div></div>
+        <div class="ind"><div class="ind-meta">③ <b>槓桿 neocloud／ROI 墊底 AI 股</b>：CoreWeave 債息約 10%、甲骨文 −65–70% 已示範；本輪的 2000 年電信商角色。</div></div>
+        <div class="ind"><div class="ind-meta">④ <b>房建鏈</b>：住宅投資佔 GDP 多年低點、曾連五季拖累成長。</div></div>
+        <div class="ind"><div class="ind-meta">⑤ <b>市值加權大盤的隱形重倉</b>：資訊投資僅佔 GDP 4% 卻貢獻 92% 成長（Furman）——買大盤＝變相 All-in AI 集中度。</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 09 轉空後劇本 ============ -->
+  <section id="s9">
+    <h2><span class="no">09</span> 轉空後劇本：下行量化・棄兒定律・提前佈局</h2>
+    <p class="sec-desc">「已知的明確事實」的代價寫在估值裡；真正的提前佈局是尋找「上一輪的棄兒」。</p>
+
+    <div class="table-card">
+      <table class="tbl">
+        <tr><th>共識產業</th><th>2000–02</th><th>2008–09</th><th>2018 / 2022</th><th>歷史回撤區間</th><th>復原特徵</th></tr>
+        <tr><td class="hl">記憶體</td><td>約 −90%</td><td>約 −85%</td><td>−50% / −47%</td><td class="hl" style="color:var(--red)">−50%～−90%</td><td>V 型深谷，寡占者活下來，股東吞最大波動</td></tr>
+        <tr><td class="hl">晶圓代工</td><td>約 −70~80%</td><td>約 −47%</td><td>— / −46%</td><td class="hl" style="color:var(--red)">−45%～−75%</td><td>復原最快，營收每輪創新高</td></tr>
+        <tr><td class="hl">電力設備</td><td>渦輪訂單 −80%・ABB 瀕臨破產</td><td>Eaton 約 −60%</td><td>—</td><td class="hl" style="color:var(--red)">−40%～−70%</td><td>受管制電網腿有底，商業訂單腿會崩</td></tr>
+      </table>
+    </div>
+    <div class="rule">🕯️ <b>被遺忘的直接前例——2000–02 美國電廠泡沫</b>：當年「電力需求爆發」共識驅動<span class="term" data-tip="商轉電廠（merchant power）：1999–2001 美國電力自由化催生的市場化電廠投資潮，瘋狂下單燃氣渦輪。2002 泡沫破裂：渦輪訂單暴跌約八成、Calpine／Mirant 破產重整、安隆倒閉。今日資料中心客戶正坐在當年商轉電廠的位置。">商轉電廠</span>瘋狂下單燃氣渦輪→2002 崩盤。<b>當年的客戶是商轉電廠，今天是 hyperscaler 與 neocloud——客戶端一崩，設備商的「在手訂單」照樣蒸發。</b>這是重電「訂單能見度 2030」最需要的一盆冷水。</div>
+
+    <h2 style="margin-top:24px"><span class="no">09b</span> 熊市贏家的<span class="term" data-tip="棄兒定律（本報告歸納）：歷次熊市的相對贏家，幾乎都是「上一輪牛市被遺棄、起始估值極低」的板塊——2000–02 的金礦、房建、小型價值全是 90 年代科技牛市的棄兒。三條件：①起始估值低（共識遺棄）②需求無彈性或由政府／通膨驅動③與泡沫震央零重疊。反例警告：防禦板塊若自己成為題材（2001 公用事業＝商轉電廠震央），就不再防禦。">棄兒定律</span></h2>
+    <div class="table-card">
+      <table class="tbl">
+        <tr><th>熊市</th><th>大盤</th><th>相對贏家</th><th>共同點</th></tr>
+        <tr><td class="hl">1973–74 停滯性通膨</td><td>S&amp;P 約 −48%</td><td>能源、黃金（漂亮 50 成長股 −60~80%）</td><td>通膨受益＋低估值</td></tr>
+        <tr><td class="hl">2000–02</td><td>Nasdaq −78%</td><td>金礦自低點約 +2~3 倍、房建翻倍、小型價值正報酬</td><td>全是 90 年代的棄兒</td></tr>
+        <tr><td class="hl">2008–09</td><td>S&amp;P −57%</td><td>無板塊倖免；跌最少：必需 −29%、醫療 −38%（金融 −83%）</td><td>需求無彈性</td></tr>
+        <tr><td class="hl">2022 通膨型</td><td>Nasdaq −33%</td><td><b>能源 +65% 唯一正報酬</b>；公用／必需／醫療 −1~−4%</td><td>價值勝成長約 20pp</td></tr>
+      </table>
+    </div>
+    <div class="rule">🎯 <b>本輪熊市型態判定</b>（依儀表板）：「③通膨迫使緊縮＋①AI 供過於求」混合體 → 模板＝1973–74＋2000–02＋2022，<b>不是 2008 通縮型</b> → 長債避險失效、能源／實物型防禦有效。⚠ 反例警告：「AI 電力概念」公用事業已是動能股，坐在 2001 年商轉電廠的位置——防禦板塊變成題材股就不再防禦。</div>
+
+    <h2 style="margin-top:24px"><span class="no">09c</span> 提前佈局清單（下行更安全且有效益・附查證）</h2>
+    <div class="grid">
+      <div class="layer">
+        <div class="layer-head"><h3>① 醫療保健</h3><span class="layer-tag tag-g">首選・棄兒定律教科書案例</span></div>
+        <div class="ind"><div class="ind-meta"><b>歷史</b>：三輪熊市全數相對抗跌（2008 −38% vs −57%；2022 −3.5%）。<b>查證</b>：Morningstar 2026 列為「全面昂貴市場中少數仍具廣泛價值」板塊；Medicare/Medicaid 定價協議＋15% 藥品關稅上限消除最壞尾部風險（PineBridge）；2023–25 連續落後大盤、修復剛起步。<b>契合</b>：需求無彈性、高齡化、與 AI 震央零重疊。<b>風險</b>：藥價政策反覆、<span class="term" data-tip="GLP-1：以 Ozempic／Wegovy 為代表的減重與糖尿病藥物，正在改變飲食習慣與慢性病結構，對食品飲料與部分醫療次產業（洗腎、睡眠呼吸中止等）構成長期顛覆敘事——是必需消費與個別醫療股的結構性風險。">GLP-1</span> 顛覆個別次產業。</div></div>
+      </div>
+      <div class="layer">
+        <div class="layer-head"><h3>② 傳統能源（油氣＋天然氣中游）</h3><span class="layer-tag tag-g">唯一的雙面資產</span></div>
+        <div class="ind"><div class="ind-meta"><b>歷史</b>：2022 唯一正報酬（+65%）、1973–74 贏家。<b>查證</b>：高盛估美資料中心電力需求 2030 年前 +165%；GE Vernova 燃氣渦輪訂單 +34%、積壓 1,500 億美元；Enbridge 追蹤 40+ 資料中心機會、股息近 5%；天然氣價僅約 $3.5＝尚未反映。<b>雙面性</b>：AI 續熱→吃電力需求；AI 崩＋通膨熊市→歷史驗證的防禦。<b>風險</b>：2008 式需求崩壞油價可 −70%（起始估值低＝安全邊際）。</div></div>
+      </div>
+      <div class="layer">
+        <div class="layer-head"><h3>③ 必需消費</h3><span class="layer-tag tag-g">波動阻尼器</span></div>
+        <div class="ind"><div class="ind-meta"><b>歷史</b>：全勤最抗跌（2008 −29%、2022 −3%）。被 AI 行情抽血後相對估值回落、股息支撐。<b>誠實提醒</b>：防禦＝跌得少，不是不跌；GLP-1 敘事壓食品次產業。</div></div>
+      </div>
+      <div class="layer">
+        <div class="layer-head"><h3>④ 國防（政府訂單型）</h3><span class="layer-tag tag-b">有現金流的黃金</span></div>
+        <div class="ind"><div class="ind-meta"><b>事實基礎</b>（截至 2026 年初）：NATO 上調支出目標、歐洲再武裝（八千億歐元量級）、德國突破債務煞車設防務基金。<b>本質差異</b>：政府預算 backlog 是唯一真正不看景氣的 backlog（vs 重電商業訂單可取消）。直接對應第④類地緣斷裂、且有現金流（優於純黃金）。<b>風險</b>：估值已隨地緣走高、政治依賴。</div></div>
+      </div>
+      <div class="layer">
+        <div class="layer-head"><h3>⑤ 黃金礦業股（衛星小倉）</h3><span class="layer-tag tag-y">危機後對沖的槓桿版</span></div>
+        <div class="ind"><div class="ind-meta"><b>歷史</b>：2000–02 自低點 +2~3 倍的前例。金價 4,500 上方而礦業股通常滯後＝<span class="term" data-tip="營運槓桿：成本相對固定時，售價（金價）上漲的增幅會放大到獲利端，礦業股因此常在金價牛市後段補漲；但反向時跌得更兇。高 beta，僅適合小倉衛星配置。">營運槓桿</span>空間。<b>風險</b>：beta 極高、成本通膨，僅配小倉。</div></div>
+      </div>
+      <div class="layer">
+        <div class="layer-head"><h3>⑥⑦ 條件式與彈藥指定標的</h3><span class="layer-tag tag-o">不是現在・警報後部署</span></div>
+        <div class="ind"><div class="ind-meta"><b>受管制公用事業（無 AI 題材版）</b>：2008–10 資本支出續增有史據；但利率 4.65% 壓制債券替代屬性，且必須避開「AI 電力概念」型→警報 1 後、利率回落時再加碼。</div></div>
+        <div class="ind"><div class="ind-meta"><b>小型價值股</b>：2000–02 大盤腰斬時正報酬、目前相對大型股折價數十年最深（反 Mag7 集中鏡像）。但信用敏感（浮動利率債務高）→<b>熊市第一段會先挨打；正確時序＝警報 1 觸發、利差衝高後，用彈藥桶去撿</b>——這就是短債部位的指定用途。</div></div>
+      </div>
+    </div>
+
+    <div class="table-card" style="margin-top:14px">
+      <table class="tbl">
+        <tr><th>現在提前佈局</th><th>警報 1 後用彈藥部署</th></tr>
+        <tr><td>醫療保健、傳統能源、必需消費、國防、金礦（小倉）</td><td>小型價值、受管制公用事業（利率回落時）、被錯殺的代工／電力咽喉股</td></tr>
+      </table>
+    </div>
+    <div class="rule">🧭 <b>提前佈局的真義</b>：不是猜頂逃頂，而是把組合從「單一劇本（AI 續漲）」改成「多劇本存活」——AI 續漲，能源電力腿吃得到；通膨型熊市，能源／醫療／必需頂住；地緣斷裂，國防／黃金頂住。統計上這叫穩健性（robustness），不是預測能力。</div>
+    <div class="rule alert" style="margin-top:10px">⚠️ <b>再次聲明：非投資建議。</b>系統性轉空來臨時「優質」與「防禦」標的一樣會下跌（2008 必需消費也跌了 29%、2000 年後台積電曾腰斬）——差別是跌得少、活得到下一輪、率先復原。退場警報比選股名單重要。歷史大熊市樣本僅四次、板塊定義隨時代變遷，機率與區間皆為框架推估。驗證日期 2026/8/28，數據將隨時間失效。</div>
+  </section>
+
+  <!-- ============ 10 結論 ============ -->
+  <section id="s10">
+    <h2><span class="no">10</span> 結論：三句話、三件事、一條警報線</h2>
+    <p class="sec-desc">整份儀表板 145 年數據與九個區塊，最終收斂成以下內容。</p>
+
+    <div class="verdict">
+      <div class="verdict-card">
+        <div class="big" style="font-size:clamp(18px,2.6vw,24px)"><span class="r">估值</span>決定跌多深・<span style="color:#e3cf58">信用</span>決定何時跌・<span class="g">棄兒</span>決定誰能贏</div>
+        <p>估值層已滿格（CAPE 第 <span class="num">98.9</span> 百分位＝柴已堆滿，故機率 <span class="num">25–40%</span> 而非 <span class="num">15%</span>）；信用層全綠（HY OAS <span class="num">275bps</span>、EBP <span class="num">−0.391</span>＝火柴未劃，故還不是警報）；歷次熊市的相對贏家，都是上一輪牛市的棄兒（醫療、能源、必需、國防）。</p>
+      </div>
+    </div>
+
+    <div class="ladder" style="margin-top:14px">
+      <div class="rung"><div class="lv lv0">做<span class="lvn">1</span></div><div class="body"><b>參與但降風險</b>：順週期只留「現金流＋定價權＋退場訊號清晰」的咽喉點（電力基建、代工、記憶體——後者退場紀律為必要條件）；避開清單五項（高收益債、長債、槓桿 neocloud、房建、大盤隱形重倉）一項都不碰；留足<span class="term" data-tip="彈藥桶：短債／現金部位。平時領息 3.5%+ 保值，警報觸發、資產被錯殺時作為進場資金。歷史上每個大底都是「有現金者的市場」；其指定用途見第 09 區時序表（小型價值、受管制公用事業、被錯殺的咽喉股）。">彈藥桶</span>。</div></div>
+      <div class="rung"><div class="lv lv1">做<span class="lvn">2</span></div><div class="body"><b>只盯一條警報線</b>：每日看<span class="term" data-tip="高收益債利差（HY OAS）：FRED 代碼 BAMLH0A0HYM2，每日更新。目前 275bps 處歷史極低區；快速走寬突破 400–500bps＝警報 1 的第一個零件。">高收益債利差</span>（FRED：BAMLH0A0HYM2）、每月看<span class="term" data-tip="超額債券溢酬（EBP）：聯準會每月公布。目前 −0.391＝風險偏好高於均值；轉正且上升＝警報 1 的第二個零件，統計上最可靠的引爆時點訊號（Gilchrist & Zakrajšek 2012）。">EBP</span>、每季看巨頭 capex 指引、隨時盯 DRAM／GPU 現貨價。<b>HY OAS 破 <span class="num">400</span> 且 EBP 轉正＝警報 1</b>，機率跳 <span class="num">60%+</span>，先砍 beta 最高的記憶體、升級防禦。</div></div>
+      <div class="rung"><div class="lv lvx">做<span class="lvn">3</span></div><div class="body"><b>提前佈局棄兒</b>：醫療保健（首選）、傳統能源（唯一雙面資產）、必需消費、國防、金礦小倉——現在就做；小型價值與受管制公用事業是「警報後」彈藥的指定標的，不是現在。</div></div>
+      <div class="rung"><div class="lv lv3">不做</div><div class="body"><b>不猜日期、不全面離場、不追已滿格的共識</b>：<span class="num">1996</span> 年葛林斯潘喊「非理性繁榮」後市場又漲了三年多——估值紅燈不是賣出訊號；但 <span class="num">2000</span>、<span class="num">2008</span> 也證明警報響起後拖延的代價。<b>紀律在警報線上，不在情緒上。</b></div></div>
+    </div>
+
+    <div class="rule">🧭 <b>最終定位</b>：本輪處於 AI 長波投資期的「高脆弱、未引爆」階段——最可能的轉空劇本是第 <span class="num">1</span> 類（AI 供過於求）＋第 <span class="num">3</span> 類（通膨迫使緊縮）的混合體（模板＝<span class="num">1973–74</span>＋<span class="num">2000–02</span>＋<span class="num">2022</span>，非 2008 通縮型）。轉空不需要新的黑天鵝，只需要現有兩條裂縫（AI 資本開支增速、黏著通膨）任一條變寬。在那之前：參與、降風險、留彈藥、盯利差、不猜日期。</div>
+
+    <div class="rule alert" style="margin-top:10px">⚠️ <b>最終聲明</b>：本報告全部內容為總體週期分析、計量文獻整理與框架推估，<b>不構成任何投資建議</b>。條件機率與回撤區間非精算輸出；歷史大熊市樣本僅四次；「優質」與「防禦」標的在系統性下跌中一樣會跌，差別是跌得少、活得到下一輪。所有數據以 <span class="num">2026/8/28</span> 為基準，將隨時間失效，執行前請更新讀數並諮詢持照顧問。</div>
+  </section>
+
+  <!-- ============ Footer ============ -->
+  <footer>
+    <div class="legend">
+      <span><span class="dot r"></span>估值滿格（前提）</span>
+      <span><span class="dot y"></span>逼近門檻</span>
+      <span><span class="dot o"></span>過熱（脆弱源）</span>
+      <span><span class="dot g"></span>未觸發</span>
+      <span><span class="dot b"></span>結構／對沖型</span>
+      <span>｜虛線詞條＝停留／點擊看說明</span>
+    </div>
+    <p><b>資料來源</b>：FRED（BAMLH0A0HYM2）、紐約聯儲、聯準會 EBP 序列、BIS Bulletin 120、Shiller 資料集、Conference Board、ISM、BEA、EIA、TrendForce、SemiAnalysis、Counterpoint、Omdia、Silicon Data、高盛、大摩、瑞銀、Morningstar、PineBridge、Janus Henderson、J.P. Morgan、Apollo（Torsten Slok）、NVIDIA 新聞稿（2026/8/10）、台電及公開資訊。<b>文獻</b>：Estrella &amp; Mishkin (1998, REStat)、Gilchrist &amp; Zakrajšek (2012, AER)、Schularick &amp; Taylor (2012, AER)、Campbell &amp; Shiller (1988/1998)、Leamer (2007, NBER)、Sahm (2019)、Berge &amp; Jordà (2011, AEJ:Macro)、Borio &amp; Lowe (2002, BIS)。</p>
+    <p>各指標數據日期不一（2026/5–2026/8），以各項標示為準。條件機率與回撤區間為文獻框架推估，非精算輸出，亦非日期預測。</p>
+    <p>⚠️ 本儀表板為總體週期分析與個人研究整理，<b>不構成投資建議</b>；投資請自行評估風險並諮詢持照顧問。｜長週期系列完整版 v2.1・2026/8/28</p>
+  </footer>
+</div>
+
+<div id="tip" role="tooltip"></div>
+
+<script>
+(function(){
+  var tip = document.getElementById('tip');
+  var current = null;
+  function show(el){
+    current = el;
+    tip.textContent = el.getAttribute('data-tip');
+    tip.style.display = 'block';
+    var r = el.getBoundingClientRect();
+    var tw = tip.offsetWidth, th = tip.offsetHeight;
+    var x = r.left + r.width/2 - tw/2;
+    x = Math.max(8, Math.min(x, window.innerWidth - tw - 8));
+    var y = r.top - th - 10;
+    if (y < 8) y = r.bottom + 10;
+    tip.style.left = x + 'px';
+    tip.style.top = y + 'px';
+  }
+  function hide(){ tip.style.display = 'none'; current = null; }
+  document.querySelectorAll('.term').forEach(function(el){
+    el.setAttribute('tabindex','0');
+    el.addEventListener('mouseenter', function(){ show(el); });
+    el.addEventListener('mouseleave', hide);
+    el.addEventListener('focus', function(){ show(el); });
+    el.addEventListener('blur', hide);
+    el.addEventListener('click', function(e){
+      e.stopPropagation();
+      if (current === el && tip.style.display === 'block') { hide(); } else { show(el); }
+    });
+  });
+  document.addEventListener('click', hide);
+  window.addEventListener('scroll', function(){ if(current) show(current); }, {passive:true});
+  window.addEventListener('resize', function(){ if(current) show(current); });
+})();
+</script>
+</body>
+</html>
